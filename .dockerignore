@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+**/.env
+**/.env.*
+.tools
+**/node_modules
+**/vendor
+**/dist
+**/coverage
+docs
+*.log

@@ -1,0 +1,218 @@
+[
+  {
+    "slug": "elden-ring",
+    "title": "ELDEN RING",
+    "steam_app_id": 1245620,
+    "price_minor": 2999,
+    "reference_price_minor": 5999,
+    "release_date": "2022-02-25",
+    "description": "Discover ELDEN RING and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "cyberpunk-2077",
+    "title": "Cyberpunk 2077",
+    "steam_app_id": 1091500,
+    "price_minor": 1949,
+    "reference_price_minor": 5999,
+    "release_date": "2020-12-10",
+    "description": "Discover Cyberpunk 2077 and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "red-dead-redemption-2",
+    "title": "Red Dead Redemption 2",
+    "steam_app_id": 1174180,
+    "price_minor": 1799,
+    "reference_price_minor": 5999,
+    "release_date": "2019-12-05",
+    "description": "Discover Red Dead Redemption 2 and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "baldurs-gate-3",
+    "title": "Baldur's Gate 3",
+    "steam_app_id": 1086940,
+    "price_minor": 4499,
+    "reference_price_minor": 5999,
+    "release_date": "2023-08-03",
+    "description": "Discover Baldur's Gate 3 and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "hogwarts-legacy",
+    "title": "Hogwarts Legacy",
+    "steam_app_id": 990080,
+    "price_minor": 1299,
+    "reference_price_minor": 5999,
+    "release_date": "2023-02-10",
+    "description": "Discover Hogwarts Legacy and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "forza-horizon-5",
+    "title": "Forza Horizon 5",
+    "steam_app_id": 1551360,
+    "price_minor": 2499,
+    "reference_price_minor": 5999,
+    "release_date": "2021-11-09",
+    "description": "Discover Forza Horizon 5 and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "god-of-war",
+    "title": "God of War",
+    "steam_app_id": 1593500,
+    "price_minor": 1699,
+    "reference_price_minor": 4999,
+    "release_date": "2022-01-14",
+    "description": "Discover God of War and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "spider-man-remastered",
+    "title": "Marvel's Spider-Man Remastered",
+    "steam_app_id": 1817070,
+    "price_minor": 2799,
+    "reference_price_minor": 5999,
+    "release_date": "2022-08-12",
+    "description": "Discover Marvel's Spider-Man Remastered and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "resident-evil-4",
+    "title": "Resident Evil 4",
+    "steam_app_id": 2050650,
+    "price_minor": 2399,
+    "reference_price_minor": 5999,
+    "release_date": "2023-03-24",
+    "description": "Discover Resident Evil 4 and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "the-witcher-3",
+    "title": "The Witcher 3: Wild Hunt",
+    "steam_app_id": 292030,
+    "price_minor": 799,
+    "reference_price_minor": 3999,
+    "release_date": "2015-05-19",
+    "description": "Discover The Witcher 3: Wild Hunt and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "hollow-knight",
+    "title": "Hollow Knight",
+    "steam_app_id": 367520,
+    "price_minor": 649,
+    "reference_price_minor": 1499,
+    "release_date": "2017-02-24",
+    "description": "Discover Hollow Knight and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "hades",
+    "title": "Hades",
+    "steam_app_id": 1145360,
+    "price_minor": 999,
+    "reference_price_minor": 2499,
+    "release_date": "2020-09-17",
+    "description": "Discover Hades and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "stardew-valley",
+    "title": "Stardew Valley",
+    "steam_app_id": 413150,
+    "price_minor": 849,
+    "reference_price_minor": 1399,
+    "release_date": "2016-02-26",
+    "description": "Discover Stardew Valley and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "no-mans-sky",
+    "title": "No Man's Sky",
+    "steam_app_id": 275850,
+    "price_minor": 2299,
+    "reference_price_minor": 5999,
+    "release_date": "2016-08-12",
+    "description": "Discover No Man's Sky and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "monster-hunter-world",
+    "title": "Monster Hunter: World",
+    "steam_app_id": 582010,
+    "price_minor": 1199,
+    "reference_price_minor": 2999,
+    "release_date": "2018-08-09",
+    "description": "Discover Monster Hunter: World and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "dark-souls-3",
+    "title": "DARK SOULS III",
+    "steam_app_id": 374320,
+    "price_minor": 2699,
+    "reference_price_minor": 5999,
+    "release_date": "2016-04-12",
+    "description": "Discover DARK SOULS III and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "sekiro",
+    "title": "Sekiro: Shadows Die Twice",
+    "steam_app_id": 814380,
+    "price_minor": 2899,
+    "reference_price_minor": 5999,
+    "release_date": "2019-03-22",
+    "description": "Discover Sekiro: Shadows Die Twice and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "death-stranding",
+    "title": "DEATH STRANDING DIRECTOR'S CUT",
+    "steam_app_id": 1850570,
+    "price_minor": 1499,
+    "reference_price_minor": 3999,
+    "release_date": "2022-03-30",
+    "description": "Discover DEATH STRANDING DIRECTOR'S CUT and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "palworld",
+    "title": "Palworld",
+    "steam_app_id": 1623730,
+    "price_minor": 2099,
+    "reference_price_minor": 2899,
+    "release_date": "2024-01-19",
+    "description": "Discover Palworld and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "helldivers-2",
+    "title": "HELLDIVERS 2",
+    "steam_app_id": 553850,
+    "price_minor": 2999,
+    "reference_price_minor": 3999,
+    "release_date": "2024-02-08",
+    "description": "Discover HELLDIVERS 2 and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "doom-eternal",
+    "title": "DOOM Eternal",
+    "steam_app_id": 782330,
+    "price_minor": 1199,
+    "reference_price_minor": 3999,
+    "release_date": "2020-03-20",
+    "description": "Discover DOOM Eternal and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "grand-theft-auto-v",
+    "title": "Grand Theft Auto V",
+    "steam_app_id": 271590,
+    "price_minor": 1499,
+    "reference_price_minor": 2999,
+    "release_date": "2015-04-14",
+    "description": "Discover Grand Theft Auto V and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "metro-exodus",
+    "title": "Metro Exodus",
+    "steam_app_id": 412020,
+    "price_minor": 799,
+    "reference_price_minor": 2999,
+    "release_date": "2020-02-14",
+    "description": "Discover Metro Exodus and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  },
+  {
+    "slug": "civilization-vi",
+    "title": "Sid Meier's Civilization VI",
+    "steam_app_id": 289070,
+    "price_minor": 599,
+    "reference_price_minor": 5999,
+    "release_date": "2016-10-21",
+    "description": "Discover Sid Meier's Civilization VI and find your next adventure. Compare demo digital offers from independent sellers, choose your activation platform and region, and keep your purchase in your library. This internship marketplace uses simulated payments and fictional activation keys."
+  }
+]

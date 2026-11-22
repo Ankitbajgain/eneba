@@ -1,0 +1,698 @@
+openapi: 3.1.0
+info:
+  title: Internship Marketplace REST API
+  version: 0.2.0-demo
+  description: Implemented REST contract for the local internship marketplace. Payments and delivered activation keys are simulated.
+servers:
+  - url: http://localhost:8000
+    description: Dedicated backend HTTP port (default BACKEND_PORT).
+  - url: http://localhost:8080
+    description: Combined application gateway (default HTTP_PORT).
+  - url: http://localhost:5173
+    description: Frontend development server with same-origin API proxy (default FRONTEND_PORT).
+tags:
+  - name: Identity
+  - name: Catalog
+  - name: Homepage
+  - name: Cart
+  - name: Orders
+paths:
+  /sanctum/csrf-cookie:
+    get:
+      operationId: csrfCookie
+      tags: [Identity]
+      responses:
+        '204':
+          description: Sets XSRF-TOKEN and marketplace_session cookies.
+  /api/v1/health:
+    get:
+      operationId: applicationHealth
+      responses:
+        '200':
+          description: Application and database ready.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, const: ok}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/auth/register:
+    post:
+      operationId: register
+      tags: [Identity]
+      parameters: [{$ref: '#/components/parameters/Csrf'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, email, password, password_confirmation]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 100}
+                email: {type: string, format: email, maxLength: 255}
+                password: {type: string, minLength: 12, maxLength: 72, writeOnly: true, description: At most 72 UTF-8 bytes for bcrypt.}
+                password_confirmation: {type: string, writeOnly: true}
+      responses:
+        '201': {$ref: '#/components/responses/User'}
+        '409': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Throttled'}
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [Identity]
+      parameters: [{$ref: '#/components/parameters/Csrf'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, minLength: 1, maxLength: 72, writeOnly: true, description: At most 72 UTF-8 bytes for bcrypt.}
+      responses:
+        '200': {$ref: '#/components/responses/User'}
+        '401': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Throttled'}
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      tags: [Identity]
+      security: [{session: []}]
+      parameters: [{$ref: '#/components/parameters/Csrf'}]
+      responses:
+        '204': {description: Session invalidated.}
+        '401': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+  /api/v1/auth/me:
+    get:
+      operationId: currentUser
+      tags: [Identity]
+      security: [{session: []}]
+      responses:
+        '200': {$ref: '#/components/responses/User'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/home:
+    get:
+      operationId: homepage
+      tags: [Homepage]
+      responses:
+        '200':
+          description: Ordered blocks; an unavailable provider has status error and empty items.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/HomeBlock'}
+  /api/v1/products:
+    get:
+      operationId: listProducts
+      tags: [Catalog]
+      parameters:
+        - {$ref: '#/components/parameters/OptionalQuery'}
+        - {name: platform, in: query, schema: {type: string, maxLength: 40}}
+        - {name: region, in: query, schema: {type: string, maxLength: 40}}
+        - {name: min_price, in: query, schema: {type: integer, minimum: 0, maximum: 10000000}}
+        - {name: max_price, in: query, schema: {type: integer, minimum: 0, maximum: 10000000}}
+        - {name: available, in: query, schema: {type: boolean}}
+        - name: sort
+          in: query
+          schema: {type: string, enum: [relevance, price_asc, price_desc, name_asc, newest]}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/PerPage'}
+      responses:
+        '200': {$ref: '#/components/responses/Products'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/products/{slug}:
+    parameters: [{$ref: '#/components/parameters/Slug'}]
+    get:
+      operationId: productDetail
+      tags: [Catalog]
+      responses:
+        '200':
+          description: Published product details; no private key fields.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    allOf:
+                      - {$ref: '#/components/schemas/ProductCard'}
+                      - type: object
+                        required: [description, release_date]
+                        properties:
+                          description: {type: string}
+                          release_date: {type: [string, 'null'], format: date}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/products/{slug}/offers:
+    parameters: [{$ref: '#/components/parameters/Slug'}]
+    get:
+      operationId: productOffers
+      tags: [Catalog]
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/PerPage'}
+      responses:
+        '200':
+          description: Active offers, available first then price and ID; includes activation restrictions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: {type: array, items: {$ref: '#/components/schemas/Offer'}}
+                  meta: {$ref: '#/components/schemas/Pagination'}
+        '404': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/catalog/filters:
+    get:
+      operationId: catalogFilters
+      tags: [Catalog]
+      responses:
+        '200':
+          description: Database-backed options; counts not included in v1.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [platforms, regions]
+                    properties:
+                      platforms: {type: array, items: {$ref: '#/components/schemas/Option'}}
+                      regions: {type: array, items: {$ref: '#/components/schemas/Region'}}
+  /api/v1/search:
+    get:
+      operationId: searchProducts
+      tags: [Catalog]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: {type: string, minLength: 2, maxLength: 100}
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 20, default: 8}
+      responses:
+        '200':
+          description: Ranked suggestions, exact and partial before bounded fuzzy matches.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    maxItems: 20
+                    items:
+                      allOf:
+                        - {$ref: '#/components/schemas/ProductCard'}
+                        - type: object
+                          required: [match_type]
+                          properties:
+                            match_type: {type: string, enum: [exact, prefix, partial, fuzzy]}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Throttled'}
+  /api/v1/cart/preview:
+    post:
+      operationId: previewGuestCart
+      tags: [Cart]
+      description: Read-only public pricing for guest offer IDs and quantities. No cart or order is persisted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: {$ref: '#/components/schemas/CartInput'}
+      responses:
+        '200': {$ref: '#/components/responses/Cart'}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Throttled'}
+  /api/v1/cart:
+    get:
+      operationId: getCart
+      tags: [Cart]
+      security: [{session: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Cart'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/cart/items:
+    post:
+      operationId: addCartItem
+      tags: [Cart]
+      security: [{session: []}]
+      parameters: [{$ref: '#/components/parameters/Csrf'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CartInput'}
+      responses:
+        '201': {$ref: '#/components/responses/Cart'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/cart/items/{itemId}:
+    parameters:
+      - {name: itemId, in: path, required: true, schema: {type: integer, minimum: 1}}
+      - {$ref: '#/components/parameters/Csrf'}
+    patch:
+      operationId: updateCartItem
+      tags: [Cart]
+      security: [{session: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [quantity]
+              properties:
+                quantity: {type: integer, minimum: 1, maximum: 10}
+      responses:
+        '200': {$ref: '#/components/responses/Cart'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+    delete:
+      operationId: removeCartItem
+      tags: [Cart]
+      security: [{session: []}]
+      responses:
+        '204': {description: Line removed; revision incremented.}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+  /api/v1/cart/merge:
+    post:
+      operationId: mergeGuestCart
+      tags: [Cart]
+      security: [{session: []}]
+      parameters: [{$ref: '#/components/parameters/Csrf'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: {$ref: '#/components/schemas/CartInput'}
+      responses:
+        '200': {$ref: '#/components/responses/Cart'}
+        '401': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/checkout:
+    post:
+      operationId: checkout
+      tags: [Orders]
+      security: [{session: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Csrf'}
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [cart_revision, simulate_result]
+              properties:
+                cart_revision: {type: integer, minimum: 1}
+                simulate_result: {type: string, enum: [success, decline]}
+      responses:
+        '201': {$ref: '#/components/responses/Order'}
+        '200':
+          description: Idempotent replay of the same order, including a prior decline.
+          headers:
+            Idempotency-Replayed: {schema: {type: boolean, const: true}}
+            Cache-Control: {schema: {type: string, const: no-store}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OrderEnvelope'}
+        '401': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+        '419': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+        '429': {$ref: '#/components/responses/Throttled'}
+  /api/v1/orders:
+    get:
+      operationId: listOrders
+      tags: [Orders]
+      security: [{session: []}]
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/PerPage'}
+      responses:
+        '200':
+          description: Own orders, newest first. No digital keys.
+          headers:
+            Cache-Control: {schema: {type: string, const: no-store}}
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data: {type: array, items: {$ref: '#/components/schemas/Order'}}
+                  meta: {$ref: '#/components/schemas/Pagination'}
+        '401': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /api/v1/orders/{orderId}:
+    parameters: [{$ref: '#/components/parameters/OrderId'}]
+    get:
+      operationId: getOrder
+      tags: [Orders]
+      security: [{session: []}]
+      responses:
+        '200': {$ref: '#/components/responses/Order'}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/orders/{orderId}/keys:
+    parameters: [{$ref: '#/components/parameters/OrderId'}]
+    get:
+      operationId: getOrderKeys
+      tags: [Orders]
+      security: [{session: []}]
+      responses:
+        '200':
+          description: Demo keys for a fulfilled order owned by the requester. Never log this body.
+          headers:
+            Cache-Control: {schema: {type: string, const: no-store}}
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [order_item_id, value]
+                      properties:
+                        order_item_id: {type: integer, minimum: 1}
+                        value: {type: string, description: Decrypted fictional activation key.}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: marketplace_session
+      description: Sanctum stateful SPA session; unsafe operations also require X-XSRF-TOKEN.
+  parameters:
+    Csrf:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      schema: {type: string}
+      description: URL-decoded XSRF-TOKEN cookie from the Sanctum bootstrap endpoint.
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema: {type: string, maxLength: 180, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    PerPage:
+      name: per_page
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 48, default: 24}
+    OptionalQuery:
+      name: q
+      in: query
+      schema: {type: string, minLength: 2, maxLength: 100}
+  responses:
+    Error:
+      description: Safe error; code identifies the condition. See api.md for status semantics.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    Throttled:
+      description: Request rate exceeded.
+      headers:
+        Retry-After: {schema: {type: integer, minimum: 1}}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+    User:
+      description: Safe user and established/current session.
+      headers:
+        Cache-Control: {schema: {type: string, const: no-store}}
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data: {$ref: '#/components/schemas/User'}
+    Products:
+      description: Published products with filtered minimum available offer price.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data, meta]
+            properties:
+              data: {type: array, items: {$ref: '#/components/schemas/ProductCard'}}
+              meta: {$ref: '#/components/schemas/Pagination'}
+    Cart:
+      description: Current server-priced cart. Warnings explain dropped or capped merge lines.
+      headers:
+        Cache-Control: {schema: {type: string, const: no-store}}
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data, warnings]
+            properties:
+              data: {$ref: '#/components/schemas/Cart'}
+              warnings: {type: array, items: {type: string}}
+    Order:
+      description: Immutable order; fulfilled/succeeded or failed/declined. No keys.
+      headers:
+        Cache-Control: {schema: {type: string, const: no-store}}
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/OrderEnvelope'}
+  schemas:
+    Error:
+      type: object
+      required: [message, code]
+      properties:
+        message: {type: string}
+        code: {type: string}
+        errors:
+          type: object
+          additionalProperties: {type: array, items: {type: string}}
+    Money:
+      type: object
+      required: [amount_minor, currency]
+      properties:
+        amount_minor: {type: integer, minimum: 0}
+        currency: {type: string, const: EUR}
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: {type: integer, minimum: 1}
+        name: {type: string}
+        email: {type: string, format: email}
+    Option:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string}
+        name: {type: string}
+    Region:
+      allOf:
+        - {$ref: '#/components/schemas/Option'}
+        - type: object
+          required: [activation_note]
+          properties:
+            activation_note: {type: string}
+    ProductCard:
+      type: object
+      required: [id, slug, title, cover_url, min_price, available]
+      properties:
+        id: {type: integer, minimum: 1}
+        slug: {type: string}
+        title: {type: string}
+        cover_url: {type: string, format: uri-reference}
+        description: {type: string}
+        platforms: {type: array, items: {$ref: '#/components/schemas/Option'}}
+        regions: {type: array, items: {$ref: '#/components/schemas/Option'}}
+        reference_price:
+          oneOf:
+            - {$ref: '#/components/schemas/Money'}
+            - {type: 'null'}
+        min_price:
+          oneOf:
+            - {$ref: '#/components/schemas/Money'}
+            - {type: 'null'}
+        available: {type: boolean}
+    Offer:
+      type: object
+      required: [id, seller, platform, region, price, reference_price, available]
+      properties:
+        id: {type: integer, minimum: 1}
+        seller:
+          type: object
+          required: [name, rating]
+          properties:
+            name: {type: string}
+            rating: {type: number, minimum: 0, maximum: 5}
+        platform: {$ref: '#/components/schemas/Option'}
+        region: {$ref: '#/components/schemas/Region'}
+        price: {$ref: '#/components/schemas/Money'}
+        reference_price:
+          oneOf:
+            - {$ref: '#/components/schemas/Money'}
+            - {type: 'null'}
+        available: {type: boolean}
+    Pagination:
+      type: object
+      required: [page, per_page, total, last_page]
+      properties:
+        page: {type: integer, minimum: 1}
+        per_page: {type: integer, minimum: 1, maximum: 48}
+        total: {type: integer, minimum: 0}
+        last_page: {type: integer, minimum: 1}
+    Banner:
+      type: object
+      required: [heading, subheading, image_url, target_path, cta_label]
+      properties:
+        heading: {type: string}
+        subheading: {type: [string, 'null']}
+        image_url: {type: string, format: uri-reference}
+        target_path: {type: string, pattern: '^/(?!/)', description: Allowlisted internal path only.}
+        cta_label: {type: string}
+    HomeBlock:
+      oneOf:
+        - type: object
+          required: [key, type, title, status, items]
+          properties:
+            key: {type: string}
+            type: {type: string, const: banner}
+            title: {type: string}
+            status: {type: string, enum: [ok, error]}
+            items: {type: array, items: {$ref: '#/components/schemas/Banner'}}
+        - type: object
+          required: [key, type, title, status, items]
+          properties:
+            key: {type: string}
+            type: {type: string, enum: [best_sellers, deals]}
+            title: {type: string}
+            status: {type: string, enum: [ok, error]}
+            items: {type: array, items: {$ref: '#/components/schemas/ProductCard'}}
+    CartInput:
+      type: object
+      additionalProperties: false
+      required: [offer_id, quantity]
+      properties:
+        offer_id: {type: integer, minimum: 1}
+        quantity: {type: integer, minimum: 1, maximum: 10}
+    Cart:
+      type: object
+      required: [revision, items, total]
+      properties:
+        revision: {type: integer, minimum: 1}
+        items:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required: [id, offer, product, quantity, observed_price, valid, issue]
+            properties:
+              id: {type: integer, minimum: 1}
+              offer: {$ref: '#/components/schemas/Offer'}
+              product: {$ref: '#/components/schemas/ProductCard'}
+              quantity: {type: integer, minimum: 1, maximum: 10}
+              observed_price: {$ref: '#/components/schemas/Money'}
+              valid: {type: boolean}
+              issue: {type: [string, 'null'], enum: [price_changed, out_of_stock, unavailable, null]}
+        total: {$ref: '#/components/schemas/Money'}
+    OrderEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/Order'}
+    Order:
+      type: object
+      required: [id, status, payment_status, total, items, created_at, fulfilled_at]
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string, enum: [fulfilled, failed]}
+        payment_status: {type: string, enum: [succeeded, declined]}
+        total: {$ref: '#/components/schemas/Money'}
+        created_at: {type: string, format: date-time}
+        fulfilled_at: {type: [string, 'null'], format: date-time}
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            required: [id, product_title, seller_name, platform_name, region_name, quantity, unit_price, line_total]
+            properties:
+              id: {type: integer, minimum: 1}
+              product_title: {type: string}
+              seller_name: {type: string}
+              platform_name: {type: string}
+              region_name: {type: string}
+              quantity: {type: integer, minimum: 1, maximum: 10}
+              unit_price: {$ref: '#/components/schemas/Money'}
+              line_total: {$ref: '#/components/schemas/Money'}
