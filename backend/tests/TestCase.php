@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -10,7 +11,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        if (! str_ends_with((string) config('database.connections.mysql.database'), '_test')) {
+        if (! str_ends_with((string) DB::connection()->getDatabaseName(), '_test')) {
             throw new \RuntimeException('Run tests with the dedicated Docker test service/database.');
         }
     }

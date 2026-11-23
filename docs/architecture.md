@@ -2,7 +2,7 @@
 
 ## Runtime and boundaries
 
-Use a modular monolith: one Laravel deployment and one MySQL instance, with explicit domain services. Separate microservices/databases would add operational work without improving this assignment. The homepage requirement is satisfied by a distinct backend service for each block type; sharing MySQL does not mean sharing one hardcoded content array.
+Use a modular monolith: one Laravel deployment and one PostgreSQL instance, with explicit domain services. Separate microservices/databases would add operational work without improving this assignment. The homepage requirement is satisfied by a distinct backend service for each block type; sharing PostgreSQL does not mean sharing one hardcoded content array.
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,7 @@ flowchart LR
   H --> D[DealContentService]
   L --> A[Identity / Sanctum]
   L --> O[Cart / Checkout / Fulfillment]
-  C --> DB[(MySQL)]
+  C --> DB[(PostgreSQL)]
   B --> DB
   S --> DB
   D --> DB
@@ -56,7 +56,7 @@ Implemented identity slice: see [phase 3A notes](modules/03-authentication.md). 
 
 Sanctum stateful SPA authentication with session cookies; do not store bearer tokens in localStorage. Frontend and API share nginx origin. First fetch `/sanctum/csrf-cookie`, then send cookies and URL-decoded `XSRF-TOKEN` as `X-XSRF-TOKEN` on unsafe requests, including login/register. Rotate the session on login, invalidate/regenerate the CSRF token on logout. Return JSON for API failures. Limit registration/login attempts. Phase 2 installs Sanctum; phase 3 wires `statefulApi()` and authenticated routes. No wildcard credentialed CORS policy is required for same-origin use.
 
-Production needs HTTPS, Secure/HttpOnly session cookies, trusted proxy configuration, `APP_DEBUG=false`, a unique persistent APP_KEY and a restrictive CSP tested against the final UI. Session-domain and stateful-origin settings must match the actual deployed hostname. Database users have only application privileges; MySQL and FPM are never published to the host.
+Production needs HTTPS, Secure/HttpOnly session cookies, trusted proxy configuration, `APP_DEBUG=false`, a unique persistent APP_KEY and a restrictive CSP tested against the final UI. Session-domain and stateful-origin settings must match the actual deployed hostname. Database users have only application privileges; PostgreSQL and FPM are never published to the host.
 
 ## Homepage composition
 
@@ -64,14 +64,14 @@ Production needs HTTPS, Secure/HttpOnly session cookies, trusted proxy configura
 
 ## Search
 
-Normalize case/whitespace and Unicode; allow 2–100 characters for queries. Bound output to 20 suggestions. Rank exact title, prefix, substring, then fuzzy results; use stable ID tie-breaking. Parameterize SQL and escape LIKE wildcard characters. Do not use MySQL FULLTEXT as a claim of typo tolerance: it does not supply edit-distance matching.
+Normalize case/whitespace and Unicode; allow 2–100 characters for queries. Bound output to 20 suggestions. Rank exact title, prefix, substring, then fuzzy results; use stable ID tie-breaking. Parameterize SQL and escape LIKE wildcard characters. Trigram candidates and application edit distance provide typo tolerance; full-text search alone does not.
 
 Store unique normalized title trigrams in `product_search_grams`, refreshed with product changes. Use indexed gram overlap to shortlist at most 100 candidates; rank those with a bounded Unicode-aware edit-distance implementation in PHP. Short two-character queries use prefix/substring only; never fetch the full catalog into PHP. Test long titles, diacritics, repeated letters, partial names and misspellings. Cap query work and measure with EXPLAIN and a larger generated dataset. An external search engine is a future upgrade only.
 
 ## Purchase transaction
 
 1. Require authenticated user, CSRF and `Idempotency-Key` (UUID). Validate `simulate_result` against an enum; payment is explicitly a fake, synchronous provider with no network calls.
-2. Start a MySQL transaction. Serialize checkout for this user with a user-row lock, then find `(user_id, idempotency_key)`. Matching stored request hash returns the existing order; reuse with different input returns 409. The hash covers the canonical request body; the existing result is returned even if the cart has since been cleared.
+2. Start a PostgreSQL transaction. Serialize checkout for this user with a user-row lock, then find `(user_id, idempotency_key)`. Matching stored request hash returns the existing order; reuse with different input returns 409. The hash covers the canonical request body; the existing result is returned even if the cart has since been cleared.
 3. Lock the cart and its items; lock all referenced offers in ascending ID order. Recalculate prices from the database. Require the client-observed cart revision; a stale cart or unavailable/changed offer returns 409 with a refreshed-cart instruction, without selling keys. A cart line stores the last acknowledged price for comparison, never pricing authority.
 4. For success, lock enough unsold key rows per offer in ascending ID order. All purchases must follow this offer/key lock order. If any line cannot be fulfilled, roll back the whole checkout and return 409. Create immutable order/item price snapshots and the payment attempt; mark keys sold with their order item. No floating point arithmetic.
 5. For a simulated decline, persist a failed order/payment with snapshots but allocate no keys; retain the cart. Retry with the same idempotency key returns the same decline. A new attempt uses a new key.

@@ -1,5 +1,9 @@
 # AI conversation record
 
+[2026-11-23-postgresql.md](2026-11-23-postgresql.md) records the explicit database change and local migration outcome; it is partial.
+
+[2026-11-22-render.md](2026-11-22-render.md) records selected visible messages and the outcome of the Render deployment preparation turn; it is explicitly partial.
+
 The assignment requires **full prompts and responses**, in Markdown or an accessible AI conversation link. Keep an authentic session export for submission. A summary, implementation journal or generated reconstruction is not an adequate replacement.
 
 [2026-11-17-foundation.md](2026-11-17-foundation.md) records the task prompt and user-visible assistant messages from this foundation turn. It is a manually maintained record, **not a complete session export**: environment/system/developer instructions, raw tool calls/results, and any inaccessible earlier history are not reproduced. Do not present it as full history. Obtain the actual complete user/assistant conversation export or a shareable conversation link before submission, and verify completeness against the session. Preserve later prompts/responses as work continues.

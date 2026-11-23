@@ -8,8 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // MySQL-specific checks and indexes are kept with the versioned schema.
-        $sql = file_get_contents(database_path('schema/marketplace.sql'));
+        // Keep the original MySQL artifact for existing installations/backups.
+        $schema = DB::getDriverName() === 'pgsql' ? 'marketplace.pgsql.sql' : 'marketplace.sql';
+        $sql = file_get_contents(database_path('schema/'.$schema));
         foreach (preg_split('/;\s*(?:\n|$)/', $sql) as $statement) {
             if (trim($statement) !== '') {
                 DB::unprepared($statement);

@@ -42,10 +42,10 @@ print(f'PASS: OpenAPI 3.1 specification, {len(api["paths"])} paths, {len(operati
 compose = load_yaml(ROOT / 'compose.yaml')
 services = compose['services']
 active = {name: service for name, service in services.items() if not service.get('profiles')}
-assert set(active) == {'database', 'backend', 'frontend', 'nginx'}
+assert set(active) == {'database', 'backend', 'frontend', 'nginx', 'adminer'}
 for name, service in active.items():
     assert 'healthcheck' in service, f'{name} has no healthcheck'
-    if name not in {'nginx', 'frontend'}:
+    if name not in {'nginx', 'frontend', 'adminer'}:
         assert not service.get('ports'), f'{name} unexpectedly publishes a port'
     build = service.get('build')
     if build:
@@ -53,11 +53,13 @@ for name, service in active.items():
     for dependency, settings in service.get('depends_on', {}).items():
         assert dependency in active
         assert settings['condition'] == 'service_healthy'
-assert 'mysql-data:/var/lib/mysql' in services['database']['volumes']
+assert 'postgres-data:/var/lib/postgresql/data' in services['database']['volumes']
 assert services['test']['profiles'] == ['tools']
 assert services['test']['environment']['DB_DATABASE'].endswith('_test')
 assert active['nginx']['ports'] == ['127.0.0.1:${HTTP_PORT:-8080}:80', '127.0.0.1:${BACKEND_PORT:-8000}:8081']
 assert active['frontend']['ports'] == ['127.0.0.1:${FRONTEND_PORT:-5173}:5173']
+assert active['adminer']['ports'] == ['127.0.0.1:${DATABASE_ADMIN_PORT:-8888}:8080']
+assert active['adminer']['environment']['ADMINER_DEFAULT_SERVER'] == 'database'
 assert active['backend']['environment']['SESSION_DOMAIN'] == '${SESSION_DOMAIN:-}'
 assert '127.0.0.1:${FRONTEND_PORT:-5173}' in active['backend']['environment']['SANCTUM_STATEFUL_DOMAINS']
 print('PASS: Compose YAML, build paths, health dependencies, persistent volume and private service ports.')

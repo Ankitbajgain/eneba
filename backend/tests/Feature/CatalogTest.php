@@ -54,6 +54,6 @@ class CatalogTest extends TestCase
         $this->seed(MarketplaceSeeder::class);
         $this->assertSame($count, DigitalKey::count());
         $this->getJson('/api/v1/products/elden-ring/offers')->assertOk()->assertJsonCount(4, 'data')->assertJsonMissingPath('data.0.encrypted_value')->assertJsonMissingPath('data.0.fingerprint');
-        $this->getJson('/api/v1/catalog/filters')->assertOk()->assertJsonCount(3,'data.platforms');
+        $this->getJson('/api/v1/catalog/filters')->assertOk()->assertJsonCount(3, 'data.platforms');
     }
 }

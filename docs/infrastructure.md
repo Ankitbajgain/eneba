@@ -7,14 +7,19 @@
 | nginx | Combined gateway + dedicated API HTTP listener | 127.0.0.1:8080 (gateway), 127.0.0.1:8000 (API) |
 | backend | PHP 8.3 FPM with required extensions and Composer 2 | Private FastCGI :9000; HTTP through nginx :8000 |
 | frontend | React/Vite dev server in latest stable Node slim image | 127.0.0.1:5173 |
-| database | Persistent MySQL 8.4 | None |
+| database | Persistent PostgreSQL 17 | None |
+| adminer | Database administration UI with PostgreSQL login | 127.0.0.1:8888 |
 | composer | Tools profile; Composer using backend source mount | None |
 | node | Tools profile; npm with shared frontend source/dependency volume | None |
-| test | Tools profile; PHP suite against dedicated `<MYSQL_DATABASE>_test` | None |
+| test | Tools profile; PHP suite against dedicated `<POSTGRES_DATABASE>_test` | None |
 
-`node:slim` tracks the latest stable Node release while reducing the initial download. This satisfies the requested latest Node.js runtime; it does not pin a release. `PHP_IMAGE`, `NODE_IMAGE`, `MYSQL_IMAGE` and `NGINX_IMAGE` can be overridden for tested builds. Production must pin resolved image digests. Dependency versions are locked by backend/composer.lock and frontend/package-lock.json.
+`node:slim` tracks the latest stable Node release while reducing the initial download. This satisfies the requested latest Node.js runtime; it does not pin a release. `PHP_IMAGE`, `NODE_IMAGE`, `POSTGRES_IMAGE` and `NGINX_IMAGE` can be overridden for tested builds. Production must pin resolved image digests. Dependency versions are locked by backend/composer.lock and frontend/package-lock.json.
 
 ## First setup
+
+Adminer is available at `http://localhost:8888`. Start it with `docker compose up -d --wait adminer`; it waits for PostgreSQL readiness and connects to `database:5432`. Sign in using `POSTGRES_USER` and `POSTGRES_PASSWORD` from the root `.env` (normally user `marketplace`). Select PostgreSQL and database `marketplace` in the login form. Credentials are entered through the login form; they are not embedded for automatic login. Set `DATABASE_ADMIN_PORT` in root `.env` to change the default 8888 port. The host binding is loopback-only and PostgreSQL itself stays unpublished.
+
+For an isolated production/Render **local Compose rehearsal**, use `docker compose --env-file .env.production -f compose.render.yaml -f compose.adminer.yaml up -d --wait adminer` and that environment file's PostgreSQL credentials. Only one local service can use port 8888 at a time. This optional overlay is not a publicly hosted Render Adminer service; Render's public HTTP endpoints use its assigned HTTPS hostname.
 
 Windows: `./scripts/setup-dev.ps1` from the repository root. It preserves existing environment files and APP_KEY. Root `.env` contains Compose settings and local database credentials; backend `.env` contains Laravel settings and APP_KEY. Compose injects the database credentials into the backend service. Browser code receives neither file.
 
@@ -69,13 +74,13 @@ Windows runtime smoke check: `./scripts/check-foundation.ps1`; add `-Build` to p
 
 Authentication HTTP check: `./scripts/check-auth.ps1`, with optional `-Origin` for a custom gateway origin. See [identity module](modules/03-authentication.md) for the flow and temporary-account cleanup. Frequent immediate reruns may be throttled by the real rate limits.
 
-Use `./scripts/check-foundation.ps1 -DatabaseOutage` to additionally stop this project's MySQL briefly, verify a safe 503 and restore it in a finally block, then verify readiness recovers. This is a deliberate development-only outage check. PowerShell scripts convert native Docker progress to text and use exit codes to distinguish failures.
+Use `./scripts/check-foundation.ps1 -DatabaseOutage` to additionally stop this project's PostgreSQL briefly, verify a safe 503 and restore it in a finally block, then verify readiness recovers. This is a deliberate development-only outage check. PowerShell scripts convert native Docker progress to text and use exit codes to distinguish failures.
 
-Gateway liveness is `/healthz`. Application/database readiness is `/api/v1/health`, returning `{"status":"ok"}` or a safe 503. Frontend health checks Vite's listener, FPM health checks FastCGI ping, and MySQL health executes authenticated `SELECT 1` using the application database. A service process running alone does not establish readiness. nginx waits for both frontend and FPM health; application readiness is checked separately.
+Gateway liveness is `/healthz`. Application/database readiness is `/api/v1/health`, returning `{"status":"ok"}` or a safe 503. Frontend health checks Vite's listener, FPM health checks FastCGI ping, and PostgreSQL health uses `pg_isready`; the application readiness endpoint executes authenticated `SELECT 1`. A service process running alone does not establish readiness. nginx waits for both frontend and FPM health; application readiness is checked separately.
 
 Frontend publishes port 5173 and nginx publishes ports 8080 and 8000, all on loopback only. `database`, `backend`, and `frontend` are container DNS names. FPM port 9000 speaks FastCGI and stays private. nginx listens internally on 80 for the combined gateway and 8081 for API-only HTTP; both use a shared API/FastCGI configuration. Vite can be reached directly on 5173 or through the combined gateway, including HMR/WebSockets. A future production build serves static frontend output from nginx and will not publish a Vite development port.
 
-MySQL initializes credentials only for a new volume. Editing passwords in `.env` does not rotate the existing database user's password. `docker compose down` preserves data. Database reset/deletion is a separate deliberate action, never a troubleshooting default. Avoid publishing `docker compose config` output, which interpolates secrets; `--quiet` validates without displaying them.
+PostgreSQL initializes credentials only for a new volume. Editing passwords in `.env` does not rotate the existing database user's password. `docker compose down` preserves data. Database reset/deletion is a separate deliberate action, never a troubleshooting default. Avoid publishing `docker compose config` output, which interpolates secrets; `--quiet` validates without displaying them.
 
 ## Verification and release limits
 
@@ -92,6 +97,6 @@ The marketplace migration now installs the domain tables too. Setup seeds 24 dem
 
 Docker/Windows Vite source mounts use polling, enabled by VITE_USE_POLLING in Compose, so code changes reach the live preview. The combined nginx listener allows the specific public `/node_modules/.vite/deps/` asset prefix; unrelated dot-file paths remain denied. These settings are limited to development.
 
-Production still requires immutable multi-stage images, npm ci/build, Composer no-dev install, no source mounts, tested non-root configuration, TLS and trusted proxies, secret injection, persistent storage, release migrations, backup/restore tests and actual hosting validation. OPcache timestamps remain enabled for development. APP_KEY must be persistent and backed up.
+Production images, rootless runtime, separate release migrations, persistent database stores and local backup/restore checks are now implemented. See [deployment](deployment.md) for the selected Render Docker hosting + private Render PostgreSQL topology, environment configuration, local rehearsal and pending cloud gates. OPcache timestamps remain enabled for development and are disabled in production. APP_KEY must be persistent and backed up.
 
-The Sites workflow was reviewed in the foundation increment. Its static/Cloudflare Worker deployment targets cannot host this full Dockerized PHP-FPM/MySQL stack. Preserve the fixed stack and select an appropriate hosting service during the delivery phase.
+The Sites workflow was reviewed in the foundation increment. Its static/Cloudflare Worker deployment targets cannot host this full Dockerized PHP-FPM/PostgreSQL stack. Preserve the fixed stack and select an appropriate hosting service during the delivery phase.

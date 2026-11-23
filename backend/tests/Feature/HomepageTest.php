@@ -31,6 +31,6 @@ class HomepageTest extends TestCase
     public function test_provider_failure_does_not_break_other_blocks(): void
     {
         $this->mock(DealContentService::class, fn ($mock) => $mock->shouldReceive('content')->once()->andThrow(new \RuntimeException('Fixture provider failure')));
-        $this->getJson('/api/v1/home')->assertOk()->assertJsonPath('data.0.status', 'ok')->assertJsonPath('data.1.status', 'ok')->assertJsonPath('data.2.status', 'error')->assertJsonCount(0,'data.2.items');
+        $this->getJson('/api/v1/home')->assertOk()->assertJsonPath('data.0.status', 'ok')->assertJsonPath('data.1.status', 'ok')->assertJsonPath('data.2.status', 'error')->assertJsonCount(0, 'data.2.items');
     }
 }

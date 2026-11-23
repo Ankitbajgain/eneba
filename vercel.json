@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "marketplace": {
+      "root": ".",
+      "entrypoint": "docker/php/Dockerfile",
+      "runtime": "container"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": { "service": "marketplace" } }
+  ]
+}

@@ -3,12 +3,13 @@
 use App\Exceptions\ApiProblem;
 use App\Services\Checkout\CheckoutService;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
-if (! str_ends_with((string) config('database.connections.mysql.database'), '_test')) {
+if (! str_ends_with((string) DB::connection()->getDatabaseName(), '_test')) {
     exit(2);
 }
 $input = json_decode($argv[1], true, flags: JSON_THROW_ON_ERROR);

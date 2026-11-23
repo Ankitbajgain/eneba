@@ -48,9 +48,15 @@ class CatalogService
         }
         $sort = $filters['sort'] ?? (isset($filters['q']) ? 'relevance' : 'newest');
         if ($sort === 'relevance' && $ids) {
-            $query->orderByRaw('FIELD(products.id,'.implode(',', array_fill(0, count($ids), '?')).')', $ids);
+            $cases = implode(' ', array_map(fn ($rank) => 'WHEN ? THEN '.$rank, array_keys($ids)));
+            $query->orderByRaw('CASE products.id '.$cases.' END', $ids);
         } elseif (in_array($sort, ['price_asc', 'price_desc'])) {
-            $query->orderByRaw('min_price_minor IS NULL')->orderBy('min_price_minor', $sort === 'price_asc' ? 'asc' : 'desc');
+            $direction = $sort === 'price_asc' ? 'asc' : 'desc';
+            if ($query->getConnection()->getDriverName() === 'pgsql') {
+                $query->orderByRaw('min_price_minor '.$direction.' NULLS LAST');
+            } else {
+                $query->orderByRaw('min_price_minor IS NULL')->orderBy('min_price_minor', $direction);
+            }
         } elseif ($sort === 'name_asc') {
             $query->orderBy('title');
         } else {

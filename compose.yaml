@@ -5,6 +5,7 @@ x-php: &php
   build:
     context: .
     dockerfile: docker/php/Dockerfile
+    target: development
     args:
       PHP_IMAGE: ${PHP_IMAGE:-php:8.3-fpm-bookworm}
   working_dir: /var/www/backend
@@ -15,24 +16,38 @@ x-php: &php
 
 services:
   database:
-    image: ${MYSQL_IMAGE:-mysql:8.4}
+    image: ${POSTGRES_IMAGE:-postgres:17-bookworm}
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-marketplace}
-      MYSQL_USER: ${MYSQL_USER:-marketplace}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Copy .env.example to .env and set MYSQL_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-marketplace}
+      POSTGRES_USER: ${POSTGRES_USER:-marketplace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
-      - mysql-data:/var/lib/mysql
-      - ./scripts/prepare-test-db.sh:/opt/marketplace/prepare-test-db.sh:ro
-    networks:
-      - application
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/prepare-postgres-test-db.sh:/opt/marketplace/prepare-test-db.sh:ro
+    networks: [application]
     healthcheck:
-      test: [CMD-SHELL, 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=TCP -h 127.0.0.1 -u "$${MYSQL_USER}" "$${MYSQL_DATABASE}" -Nse "SELECT 1" | grep -qx 1']
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 40s
+      start_period: 20s
+
+  adminer:
+    image: ${ADMINER_IMAGE:-adminer:standalone}
+    restart: unless-stopped
+    ports: ["127.0.0.1:${DATABASE_ADMIN_PORT:-8888}:8080"]
+    environment:
+      ADMINER_DEFAULT_SERVER: database
+    networks: [application]
+    depends_on:
+      database: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, php, -d, allow_url_fopen=1, -r, "exit(@file_get_contents('http://127.0.0.1:8080/') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
   backend:
     <<: *php
@@ -43,12 +58,13 @@ services:
       APP_ENV: local
       APP_DEBUG: "false"
       APP_URL: http://localhost:${BACKEND_PORT:-8000}
-      DB_CONNECTION: mysql
+      DB_CONNECTION: pgsql
+      DB_SSLMODE: disable
       DB_HOST: database
-      DB_PORT: "3306"
-      DB_DATABASE: ${MYSQL_DATABASE:-marketplace}
-      DB_USERNAME: ${MYSQL_USER:-marketplace}
-      DB_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      DB_PORT: "5432"
+      DB_DATABASE: ${POSTGRES_DATABASE:-marketplace}
+      DB_USERNAME: ${POSTGRES_USER:-marketplace}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       SESSION_DRIVER: database
       SESSION_COOKIE: marketplace_session
       SESSION_DOMAIN: ${SESSION_DOMAIN:-}
@@ -67,6 +83,7 @@ services:
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
+      target: development
       args:
         NODE_IMAGE: ${NODE_IMAGE:-node:slim}
     restart: unless-stopped
@@ -123,7 +140,7 @@ services:
     environment:
       <<: *backend-environment
       APP_ENV: testing
-      DB_DATABASE: ${MYSQL_DATABASE:-marketplace}_test
+      DB_DATABASE: ${POSTGRES_DATABASE:-marketplace}_test
       CACHE_LIMITER: array
       SESSION_DRIVER: array
     entrypoint: [sh, /var/www/backend/tests/run.sh]
@@ -148,5 +165,5 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-data:
+  postgres-data:
   frontend-modules:

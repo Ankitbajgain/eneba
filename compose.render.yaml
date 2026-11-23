@@ -1,0 +1,18 @@
+# Local rehearsal of the Render image, using an isolated Compose project.
+name: ${COMPOSE_PROJECT_NAME:-eneba-render}
+services:
+  database:
+    extends: {file: compose.production.yaml, service: database}
+  backend:
+    extends: {file: compose.vercel.yaml, service: backend}
+    image: eneba-render:production
+    build:
+      target: render
+  release:
+    extends: {file: compose.production.yaml, service: release}
+  backup:
+    extends: {file: compose.production.yaml, service: backup}
+networks:
+  application: {driver: bridge}
+volumes:
+  postgres-production:

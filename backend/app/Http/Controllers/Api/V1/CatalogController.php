@@ -42,7 +42,8 @@ class CatalogController extends Controller
         $request->validate(['page' => ['sometimes', 'integer', 'min:1'], 'per_page' => ['sometimes', 'integer', 'between:1,48']]);
         $product = Product::where('is_published', true)->where('slug', $slug)->firstOrFail();
         $page = $product->offers()->where('is_active', true)->with(['seller', 'platform', 'region', 'product'])
-            ->withCount(['keys as available_keys_count' => fn ($q) => $q->whereNull('order_item_id')])->orderByRaw('available_keys_count = 0')->orderBy('price_minor')->orderBy('id')->paginate($request->integer('per_page', 24));
+            ->withExists(['keys as in_stock' => fn ($q) => $q->whereNull('order_item_id')])
+            ->withCount(['keys as available_keys_count' => fn ($q) => $q->whereNull('order_item_id')])->orderByDesc('in_stock')->orderBy('price_minor')->orderBy('id')->paginate($request->integer('per_page', 24));
 
         return response()->json(['data' => OfferResource::collection($page)->resolve(), 'meta' => $this->meta($page)]);
     }

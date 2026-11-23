@@ -16,7 +16,6 @@ try {
     if (-not (Test-Path -LiteralPath '.env')) {
         $settings = Get-Content -Raw -LiteralPath '.env.example'
         $settings = $settings.Replace('local-marketplace-change-me', [guid]::NewGuid().ToString('N'))
-        $settings = $settings.Replace('local-root-change-me', [guid]::NewGuid().ToString('N'))
         [IO.File]::WriteAllText((Join-Path (Get-Location) '.env'), $settings)
     }
     if (-not (Test-Path -LiteralPath 'backend/.env')) {

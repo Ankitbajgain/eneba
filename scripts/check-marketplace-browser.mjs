@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from '../.tools/browser/node_modules/playwright/index.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
+const composeArgs = ['compose',
+  ...(process.env.MARKETPLACE_ENV_FILE ? ['--env-file', process.env.MARKETPLACE_ENV_FILE] : []),
+  ...(process.env.MARKETPLACE_COMPOSE_FILE ? ['-f', process.env.MARKETPLACE_COMPOSE_FILE] : [])]
 const chrome = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
 const browser = await chromium.launch({ headless: true, executablePath: process.env.BROWSER_EXECUTABLE || (existsSync(chrome) ? chrome : undefined) })
 const origins = (process.env.MARKETPLACE_BROWSER_ORIGINS || 'http://127.0.0.1:5173,http://localhost:8080').split(',')
@@ -58,6 +61,14 @@ try {
       await page.getByRole('button', { name: /^Pay .*Demo$/ }).click()
       await page.getByRole('heading', { name: 'Thanks for your order!', exact: true }).waitFor()
       const orderPath = new URL(page.url()).pathname
+      if (process.env.MARKETPLACE_RESTART_CHECK === 'true') {
+        const services = (process.env.MARKETPLACE_RESTART_SERVICES || 'database,backend,web').split(',')
+        execFileSync('docker', [...composeArgs, 'restart', ...services], { cwd: root, stdio: 'pipe', timeout: 120000 })
+        execFileSync('docker', [...composeArgs, 'up', '-d', '--wait', ...services], { cwd: root, stdio: 'pipe', timeout: 120000 })
+        await page.reload()
+        await page.getByRole('heading', { name: 'Thanks for your order!', exact: true }).waitFor()
+        console.log(`PASS ${origin}: session and completed order survived database/backend/web restart.`)
+      }
       await page.getByRole('button', { name: 'Reveal demo keys', exact: true }).click()
       await page.locator('.key-row code').first().waitFor()
       assert.ok((await page.locator('.key-row code').first().innerText()).startsWith('DEMO-'))
@@ -76,7 +87,7 @@ try {
       console.log(`PASS ${origin}: responsive home, typo search, filters, seller offers, guest cart, registration/merge, declined/successful checkout, demo keys, order history and logout protection.`)
     } finally {
       await context.close()
-      execFileSync('docker', ['compose', 'exec', '-T', '-e', `AUTH_SMOKE_EMAIL=${email}`, 'backend', 'php', 'tests/cleanup-smoke.php'], { cwd: root, stdio: 'pipe' })
+      execFileSync('docker', [...composeArgs, 'exec', '-T', '-e', `AUTH_SMOKE_EMAIL=${email}`, 'backend', 'php', 'tests/cleanup-smoke.php'], { cwd: root, stdio: 'pipe' })
     }
   }
 } finally { await browser.close() }

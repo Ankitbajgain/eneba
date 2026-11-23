@@ -3,6 +3,8 @@
 !.env.example
 !.env.*.example
 .tools/
+.backups/
+.vercel/
 **/vendor/
 **/node_modules/
 **/dist/

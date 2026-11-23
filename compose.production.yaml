@@ -1,0 +1,119 @@
+name: ${COMPOSE_PROJECT_NAME:-eneba-release}
+
+x-production-php: &production-php
+  image: eneba-api:production
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: production
+    args:
+      PHP_IMAGE: ${PHP_IMAGE:-php:8.3-fpm-bookworm}
+  environment: &production-environment
+    APP_NAME: Eneba-style Marketplace
+    APP_ENV: production
+    APP_DEBUG: "false"
+    APP_URL: ${APP_URL:?Set the public HTTPS APP_URL}
+    APP_KEY: ${APP_KEY:?Set a persistent production APP_KEY}
+    KEY_FINGERPRINT_SECRET: ${KEY_FINGERPRINT_SECRET:?Set a persistent fingerprint secret}
+    DB_CONNECTION: pgsql
+    DB_SSLMODE: disable
+    DB_HOST: database
+    DB_PORT: "5432"
+    DB_DATABASE: ${POSTGRES_DATABASE:-marketplace}
+    DB_USERNAME: ${POSTGRES_USER:-marketplace}
+    DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    SESSION_DRIVER: database
+    SESSION_COOKIE: marketplace_session
+    SESSION_DOMAIN: ${SESSION_DOMAIN:-}
+    SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-true}
+    SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:?Set the public hostname}
+    CACHE_STORE: database
+    CACHE_LIMITER: database
+    QUEUE_CONNECTION: sync
+    LOG_CHANNEL: stderr
+    LOG_LEVEL: warning
+    DEMO_PAYMENTS_ENABLED: ${DEMO_PAYMENTS_ENABLED:-false}
+    TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+  networks: [application]
+
+services:
+  database:
+    image: ${POSTGRES_IMAGE:-postgres:17-bookworm}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE:-marketplace}
+      POSTGRES_USER: ${POSTGRES_USER:-marketplace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: [postgres-production:/var/lib/postgresql/data]
+    networks: [application]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  backend:
+    <<: *production-php
+    restart: unless-stopped
+    depends_on:
+      database: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, /usr/local/bin/fpm-healthcheck]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+
+  web:
+    image: eneba-web:production
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      target: production
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:slim}
+    restart: unless-stopped
+    ports: ["127.0.0.1:${RELEASE_HTTP_PORT:-9080}:8080"]
+    environment:
+      PORT: "8080"
+      PHP_FPM_UPSTREAM: backend:9000
+    networks: [application]
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/healthz]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging: *logging
+
+  release:
+    <<: *production-php
+    profiles: [tools]
+    entrypoint: [production-entrypoint, php, artisan]
+    depends_on:
+      database: {condition: service_healthy}
+
+  backup:
+    image: ${POSTGRES_IMAGE:-postgres:17-bookworm}
+    profiles: [tools]
+    entrypoint: [sh, /opt/backup-database.sh]
+    environment:
+      PGDATABASE: ${POSTGRES_DATABASE:-marketplace}
+      PGUSER: ${POSTGRES_USER:-marketplace}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGHOST: database
+    volumes:
+      - ./.backups:/backups
+      - ./scripts/backup-database.sh:/opt/backup-database.sh:ro
+    networks: [application]
+    depends_on:
+      database: {condition: service_healthy}
+
+networks:
+  application: {driver: bridge}
+volumes:
+  postgres-production:

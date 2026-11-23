@@ -21,12 +21,13 @@ class HealthTest extends TestCase
     {
         // Use an actual refused connection rather than mocking the DB manager,
         // which Laravel also resolves while constructing its response factory.
+        $connection = config('database.default');
         config([
-            'database.connections.mysql.host' => '127.0.0.1',
-            'database.connections.mysql.port' => 1,
-            'database.connections.mysql.unix_socket' => '',
+            "database.connections.$connection.host" => '127.0.0.1',
+            "database.connections.$connection.port" => 1,
+            "database.connections.$connection.unix_socket" => '',
         ]);
-        DB::purge('mysql');
+        DB::purge($connection);
 
         $this->withHeaders(['Origin' => 'http://localhost:8080', 'Referer' => 'http://localhost:8080/'])
             ->getJson('/api/v1/health')

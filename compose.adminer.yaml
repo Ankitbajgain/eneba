@@ -1,0 +1,6 @@
+# Optional loopback-only PostgreSQL UI for release Compose rehearsals.
+services:
+  adminer:
+    extends:
+      file: compose.yaml
+      service: adminer

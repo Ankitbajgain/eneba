@@ -1,5 +1,66 @@
 # Validation record
 
+## PostgreSQL migration ? 2026-11-23
+
+The user explicitly replaced the original MySQL requirement with Render Postgres to use the free demo tier. Current Docker development, production rehearsal and CI target PostgreSQL 17. Historical MySQL records below remain evidence of earlier increments.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Schema/runtime | Passed locally | PHP PDO PostgreSQL compiled; Laravel identity, 14-table PostgreSQL domain schema and shared cache migrations applied; five healthy local services |
+| Existing data | Passed locally | Private MySQL snapshot imported into empty PostgreSQL; all 17 snapshot table counts matched; identity sequences advanced; user password hashes, prices, order identities/status/totals and encrypted payloads/fingerprints compared directly; all demo keys decrypted with unchanged APP_KEY |
+| Backend regression | Passed | 31 tests / 188 assertions on dedicated PostgreSQL test DB, including real two-process last-key checkout race, idempotency/rollback/ownership, auth/CSRF and safe DB outage handling |
+| Development browser acceptance | Passed locally | Desktop 127.0.0.1:5173 and mobile localhost:8080: homepage/search/filters/offers, account/cart, decline/success, keys/history/logout; generated fixtures cleaned up |
+| Production image | Passed locally | Render Docker target built with PDO pgsql, fresh isolated PostgreSQL migrations/seeds and HTTP readiness; full checkout/session/order/key flow survived DB/app restart on localhost:9082 |
+| Backup/recovery | Passed locally | pg_dump restored into a new disposable PostgreSQL DB: 24 products, 892 keys, 80 offers, 3 homepage blocks and 3 migrations; full encrypted inventory checksum matched; recovery DB removed |
+| Database UI | Passed locally | Adminer replaces MySQL-only phpMyAdmin on 127.0.0.1:8888; real PostgreSQL login and marketplace tables verified without printing passwords |
+| HTTP hardening | Passed locally | Foundation runtime and real gateway auth smoke: cookies, CSRF, login/logout rotation, old-session rejection and persistent limits |
+| Code/docs checks | Passed | Pint 71 files, Compose/OpenAPI/SQL reference inventory/local Markdown links, whitespace and official Render Blueprint JSON schema |
+| Render configuration | Passed schema validation | Free managed Postgres 17 + free web service, same-region database references, TLS require, external access closed by default; no paid MySQL/disk resources |
+| Cloud gates | Pending | Account connection, source publishing, actual Render deployment/HTTPS/TLS verification/public URL; free Postgres expires after 30 days and has no managed backups |
+
+MySQL volumes and private original environment backups are preserved. No old volume was mounted as PostgreSQL or deleted. The CLI transfer snapshot is private, ignored and excluded from image builds. Only isolated test/restore fixtures were removed. See [deployment](deployment.md) for restricted external release migrations and exports.
+
+
+## phpMyAdmin and Render MySQL configuration — 2026-11-23
+
+- Passed: official phpMyAdmin Apache image pulled; `docker compose up -d --wait phpmyadmin` completed with healthy MySQL/phpMyAdmin. Host binding is `127.0.0.1:8888:80`; MySQL stays private.
+- Passed: real browser login with existing application DB credentials and read-only display of marketplace tables, including products/digital_keys. Passwords were not printed and no database records were changed. Credentials are entered through cookie authentication, not embedded for automatic login.
+- Corrected health probe: this image disables PHP `allow_url_fopen`; the final HTTP probe uses installed curl and returns 200.
+- Passed: development Compose parser, optional phpMyAdmin overlay merged with the Render rehearsal, design/OpenAPI/local documentation links and whitespace checks.
+- Previous request completed at configuration level: Render Blueprint now includes `mysql:8.4` as a private Starter service with a 1 GB `/var/lib/mysql` disk, separate generated application/root passwords, and automatic app host/credential references. Official Render schema validation passed. Same-region free web services can send private requests to the database.
+- Cloud provisioning is still pending Render connection and review of billable MySQL resources. Private-network migrations need a suitable release runner; the free app has no shell/pre-deploy command. No paid compute, disk or hosted phpMyAdmin was created. Earlier Railway deployment notes below are historical.
+
+## Render target — 2026-11-22
+
+User changed application hosting to Render; the previously selected Railway MySQL remains the database target. `render.yaml` defines a free web service, external DB secret prompts and manual deployments; it does not create paid MySQL/disks. `compose.render.yaml` rehearses the same image locally. Shared Vercel runtime configuration is reused without requiring Vercel.
+
+- Passed: `render.yaml` validated with Draft 2020-12 against the official `https://render.com/schema/render.yaml.json` schema. Validation caught YAML boolean parsing of unquoted `off`; the final value is quoted.
+- Passed: Docker `render` target build, resolved Compose configuration and healthy runtime using the isolated release MySQL volume.
+- Passed: desktop localhost:9081 and mobile 127.0.0.1:9081 browser purchase checks, including typo search, offers, guest/account cart, registration, declined/successful checkout, key delivery/history and logout protection; no uncaught browser exceptions.
+- Passed: on both viewports, the authenticated session/completed order survived database/application restart and encrypted keys were revealed successfully afterward. Generated accounts/orders were cleaned up.
+- Passed: design/OpenAPI/local documentation links. CI now rehearses `compose.render.yaml`; remote GitHub Actions has not been run here.
+- Pending: Render/Railway authenticated account access, publishing release source, remote MySQL provisioning/TLS verification, public Render deployment/URL, HTTPS cookies and cloud persistence/backup acceptance.
+
+See [current deployment runbook](deployment.md). Earlier Vercel results below are historical local validation, not the selected hosting target or proof of any cloud deployment.
+
+## Deployment preparation — 2026-11-22
+
+The user selected Vercel Docker containers and Railway MySQL. These are **local production-image checks**, not evidence of a public cloud deployment.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Immutable images | Passed locally | FPM no-dev Composer image, compiled React/nginx image and combined `vercel` HTTP target all built; production PHP runs as www-data; local Laravel provider caches excluded |
+| Production startup | Passed locally | Separate projects/volumes/secrets; three migrations and explicit demo seeds; healthy MySQL/FPM/nginx services on port 9080; combined Vercel-image/MySQL rehearsal on port 9081 |
+| Production browser flows | Passed locally | Both separate-service and combined-image layouts: desktop localhost and mobile 127.0.0.1; homepage, typo search, filters, offers, registration/cart merge, decline/success, keys/history/logout; no uncaught browser errors |
+| Restart durability | Passed locally | Existing browser session and successful order survived database/application restart; encrypted key successfully revealed afterward in both layouts; both viewports checked for combined image |
+| Backup/restore | Passed locally | Consistent mysqldump restored into a newly created disposable database: 24 products, 892 keys, 80 offers, 3 blocks, 3 migrations; encrypted key checksum compared; recovery database removed |
+| Regression | Passed | MySQL suite rerun: 31 tests / 188 assertions; focused Pint formatting; production TypeScript/Vite asset compilation; design/OpenAPI/document link validation |
+| Secret initializer | Passed locally | Created an ignored independent environment file; Docker parsed its configuration; runtime requires a persistent APP_KEY and rejects debug mode |
+| CI configuration | Added, remote run pending | Production job builds/rehearses combined Vercel image, migrates, seeds, checks HTTP readiness/deep link and creates backup; no claimed GitHub Actions result |
+| Cloud deployment | Pending | Vercel and Railway connections absent at last check; no cloud resource IDs/public URL; remote MySQL hostname/cert/TLS verification, HTTPS cookies, region/connection limits, tier retention, cloud backup and recycle checks remain |
+
+Release files exclude real secrets and backups from Git/build context. Development services/data were preserved. HTTP-only rehearsal explicitly disables Secure cookies for loopback; public settings require HTTPS and Secure cookies. See [deployment runbook](deployment.md).
+
 ## Functional marketplace — 2026-11-22
 
 Implemented and validated in slices: (1) versioned MySQL domain schema, deterministic demo data and catalog/search; (2) independent homepage content providers and fixture sales; (3) transactional cart/checkout/key delivery; (4) routed responsive storefront and browser acceptance. The design snapshot remains a review artifact; setup uses migrations only.

@@ -37,7 +37,7 @@ try {
     }
     $extensions = Invoke-Docker compose exec -T backend php -m
     if ($LASTEXITCODE -ne 0) { throw 'Could not inspect PHP extensions.' }
-    foreach ($extension in @('pdo_mysql', 'mbstring', 'intl', 'zip', 'bcmath', 'Zend OPcache')) {
+    foreach ($extension in @('pdo_pgsql', 'mbstring', 'intl', 'zip', 'bcmath', 'Zend OPcache')) {
         if ($extensions -notcontains $extension) { throw "Required PHP extension missing: $extension" }
     }
     Invoke-Docker compose exec -T backend composer --version

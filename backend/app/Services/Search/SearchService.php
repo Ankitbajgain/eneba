@@ -39,7 +39,7 @@ class SearchService
     {
         $q = $this->normalize($input);
         $literal = addcslashes($q, '%_\\');
-        $direct = Product::where('is_published', true)->where('title', 'like', '%'.$literal.'%')->orderBy('id')->limit(100)->pluck('id')->all();
+        $direct = Product::where('is_published', true)->whereRaw('LOWER(title) LIKE ?', ['%'.$literal.'%'])->orderBy('id')->limit(100)->pluck('id')->all();
         $grams = $this->grams($q);
         $fuzzy = mb_strlen($q) >= 4 && $grams
             ? DB::table('product_search_grams')->select('product_id')->whereIn('gram', $grams)->groupBy('product_id')->orderByRaw('COUNT(*) DESC')->orderBy('product_id')->limit(100)->pluck('product_id')->all()

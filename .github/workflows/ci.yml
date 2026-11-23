@@ -25,22 +25,21 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     services:
-      mysql:
-        image: mysql:8.4
+      postgres:
+        image: postgres:17-bookworm
         env:
-          MYSQL_DATABASE: marketplace_test
-          MYSQL_USER: marketplace
-          MYSQL_PASSWORD: test-only-password
-          MYSQL_ROOT_PASSWORD: test-only-root
-        ports: [3306:3306]
+          POSTGRES_DB: marketplace_test
+          POSTGRES_USER: marketplace
+          POSTGRES_PASSWORD: test-only-password
+        ports: [5432:5432]
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-cmd="pg_isready -U marketplace -d marketplace_test"
           --health-interval=10s --health-timeout=5s --health-retries=12
     env:
       APP_ENV: testing
-      DB_CONNECTION: mysql
+      DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_DATABASE: marketplace_test
       DB_USERNAME: marketplace
       DB_PASSWORD: test-only-password
@@ -49,7 +48,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo_mysql, mbstring, intl, zip, bcmath
+          extensions: pdo_mysql, pdo_pgsql, mbstring, intl, zip, bcmath
           coverage: none
       - run: cp .env.example .env
         working-directory: backend
@@ -84,3 +83,22 @@ jobs:
         shell: pwsh
       - if: always()
         run: docker compose down
+
+  production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/initialize-release.ps1 -AppUrl http://localhost:9080 -AllowLocalHttp -ProjectName eneba-ci
+        shell: pwsh
+      - run: docker compose --env-file .env.production -f compose.render.yaml config --quiet
+      - run: docker compose --env-file .env.production -f compose.render.yaml build backend release
+      - run: docker compose --env-file .env.production -f compose.render.yaml up -d --wait database
+      - run: docker compose --env-file .env.production -f compose.render.yaml run --rm release migrate --force
+      - run: docker compose --env-file .env.production -f compose.render.yaml run --rm release db:seed --force
+      - run: docker compose --env-file .env.production -f compose.render.yaml up -d --wait backend
+      - run: |
+          curl --fail --silent http://localhost:9080/api/v1/health
+          curl --fail --silent http://localhost:9080/products/elden-ring > /dev/null
+      - run: docker compose --env-file .env.production -f compose.render.yaml run --rm backup
+      - if: always()
+        run: docker compose --env-file .env.production -f compose.render.yaml down
