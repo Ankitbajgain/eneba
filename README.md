@@ -70,6 +70,7 @@ The HTTP smoke check creates one random demo account, verifies real cookies/CSRF
 - [Framework module: scope, decisions and testing](docs/modules/02-framework.md)
 - [Authentication module](docs/modules/03-authentication.md)
 - [Storefront, content, catalog and purchase modules](docs/modules/04-marketplace.md)
+- [Maintenance APIs](docs/modules/05-maintenance.md)
 - [Artwork sources](docs/assets.md)
 - [Docker runbook](docs/infrastructure.md)
 - [Render application and PostgreSQL deployment, release validation and recovery](docs/deployment.md)

@@ -19,3 +19,4 @@ backend/storage/framework/testing/*
 .backups
 .vercel
 backend/storage/app/*
+backend/public/storage

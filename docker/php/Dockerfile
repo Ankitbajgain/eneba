@@ -33,7 +33,8 @@ ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr CACHE_STORE=database C
 COPY backend/ /var/www/backend/
 RUN composer install --no-dev --no-interaction --prefer-dist --classmap-authoritative --no-scripts \
     && php artisan package:discover --ansi \
-    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && ln -s /var/www/backend/storage/app/public public/storage \
     && chown -R www-data:www-data storage bootstrap/cache
 COPY docker/php/production.ini /usr/local/etc/php/conf.d/zz-production.ini
 COPY docker/php/production-pool.conf /usr/local/etc/php-fpm.d/zzz-production.conf

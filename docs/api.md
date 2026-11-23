@@ -54,3 +54,7 @@ Adding items returns 201 with the entire cart, including on existing-line upsert
 Checkout body: `{ "cart_revision":7,"simulate_result":"success" }`; header `Idempotency-Key: <UUID>`. Success creates and returns an order with 201. Simulated decline also creates an order with 201, `status=failed` and `payment_status=declined`; it is a recorded business outcome, not an HTTP transport error. Replay returns the same resource with 200 and `Idempotency-Replayed: true`. Header reuse with a different canonical request body, stale cart revision, changed price, empty cart or insufficient keys returns 409 with a stable code (`idempotency_conflict`, `cart_changed`, `price_changed`, `cart_empty`, `out_of_stock`). Missing/invalid idempotency header returns 422. A checkout conflict creates no order. Cart clearing and key delivery happen only on success.
 
 Keys are fetched separately after fulfillment; do not embed them in order lists or checkout responses. Every private response uses `Cache-Control: no-store`. No actual payment card inputs or external payment tokens are accepted.
+
+## Maintenance
+
+Public POST `/api/v1/maintenance/migrate`, `/api/v1/maintenance/cache-clear`, `/api/v1/maintenance/optimize` and `/api/v1/maintenance/storage-link` invoke fixed Artisan calls without login, a token or an enable flag. Empty body/no query options; responses are private/no-store. See [commands and usage](modules/05-maintenance.md).

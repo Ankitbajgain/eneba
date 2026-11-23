@@ -1,5 +1,7 @@
 # AI conversation record
 
+[2026-11-23-maintenance.md](2026-11-23-maintenance.md) records the maintenance API request/outcome; it is partial.
+
 [2026-11-23-postgresql.md](2026-11-23-postgresql.md) records the explicit database change and local migration outcome; it is partial.
 
 [2026-11-22-render.md](2026-11-22-render.md) records selected visible messages and the outcome of the Render deployment preparation turn; it is explicitly partial.

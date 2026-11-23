@@ -1,5 +1,27 @@
 # Validation record
 
+## Public maintenance APIs - 2026-11-23
+
+The user explicitly removed maintenance login/token requirements. This supersedes the operator-only implementation recorded below. The four maintenance POST endpoints are now public with no enable flag, operator credential, session or CSRF middleware. Customer checkout/history authentication remains unchanged.
+
+- Passed full PostgreSQL suite: **38 tests / 232 assertions**. The seven maintenance tests cover unauthenticated fixed Artisan dispatch (including an Origin header with no session cookie), allowed HTTP methods/actions, rejected command options, database outage errors, cache/optimization calls, real idempotent storage links/conflicts, safe command failures and PostgreSQL lock contention/release.
+- Passed live local HTTP calls without Authorization/cookies: migrate, cache-clear, optimize and storage-link all returned 200/completed; caches cleared afterward to restore the development workflow.
+- Passed production-container HTTP checks on a fresh empty PostgreSQL database: no Authorization, cookies, CSRF token, enable settings or HTTPS override; migrations succeeded twice, optimization artifacts were created, subsequent public requests worked through cached routes, storage linking was idempotent, and cache clearing removed data/config/route/event caches. Temporary production test services were stopped afterward.
+- Passed production PHP image build, Pint **74 files**, OpenAPI **25 paths / 26 operations**, design/document-link checks and whitespace checks. These are local results, not a remote Render deployment claim.
+- Removed maintenance auth middleware/config, token-generation script, Compose/environment/Render settings and OpenAPI authentication requirements. Updated API/deployment examples to plain POST requests. Only fixed maintenance commands remain callable; PostgreSQL advisory locking/no-store responses and safe error handling remain.
+
+Earlier token/revocation validation below is historical, not a current access requirement. See [current usage](modules/05-maintenance.md).
+
+## Operator maintenance APIs - 2026-11-23
+
+- Implemented POST-only migrate, cache-clear, optimize and storage-link endpoints using fixed `Artisan::call` invocations. Dedicated hashed operator credentials, disabled by default; customer auth and arbitrary arguments do not authorize operations.
+- Passed full PostgreSQL regression: **41 tests / 246 assertions**, including 10 maintenance tests. Checks cover missing/wrong/customer/query credentials, disabled/no-query behavior, production HTTPS/runtime revocation/rotation despite cached settings, command options, redacted exceptions/nonzero exits, refused DB connection, real idempotent symlinks/conflicts and a second PostgreSQL session contending for the shared advisory lock.
+- Passed real HTTP production-image checks on a new isolated PostgreSQL DB with no users/session/cache tables: rejected absent credentials and insecure requests, migrated twice successfully with an Origin header, created config/event/route caches, reauthorized through cached routes, invoked storage:link twice, then cleared shared cache data and bootstrap artifacts. Rootless image contains the pre-created standard public storage link. Local forwarded HTTPS metadata was simulated; actual cloud TLS remains pending.
+- Passed final Render image build, Pint **76 files**, OpenAPI **25 paths / 26 operations**, Compose/design/local links, official Render Blueprint JSON schema and whitespace validation. Cloud deployment remains separate.
+- Generated operator credentials only in ignored `.tools/maintenance-credentials.json`; plaintext tokens were not printed, embedded in frontend code or included in image builds. Test credentials are independent of the generated operator credential. Temporary maintenance test services are stopped after validation; development defaults remain disabled.
+
+See [maintenance commands and setup](modules/05-maintenance.md). Optimization/symlink changes are instance-local; PostgreSQL migrations and the maintenance lock use the shared DB. Existing development data was not reset by these checks.
+
 ## PostgreSQL migration ? 2026-11-23
 
 The user explicitly replaced the original MySQL requirement with Render Postgres to use the free demo tier. Current Docker development, production rehearsal and CI target PostgreSQL 17. Historical MySQL records below remain evidence of earlier increments.

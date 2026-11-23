@@ -5,12 +5,19 @@ use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HomeController;
+use App\Http\Controllers\Api\V1\MaintenanceController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Middleware\NoStore;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 Route::prefix('v1')->group(function (): void {
+    // Public maintenance endpoints, as requested. No session/CSRF middleware:
+    // the first migration must work before user/session/cache tables exist.
+    Route::post('/maintenance/{action}', MaintenanceController::class)
+        ->whereIn('action', ['migrate', 'cache-clear', 'optimize', 'storage-link'])
+        ->middleware(NoStore::class)
+        ->withoutMiddleware(EnsureFrontendRequestsAreStateful::class);
     Route::withoutMiddleware(EnsureFrontendRequestsAreStateful::class)->group(function (): void {
         Route::get('/home', HomeController::class);
         Route::post('/cart/preview', [CartController::class, 'preview'])->middleware('throttle:60,1');
