@@ -2,11 +2,22 @@
 set -eu
 if [ "${RENDER:-}" = 'true' ]; then
     php -r '
-        $url = getenv("DB_URL");
-        $host = $url ? parse_url($url, PHP_URL_HOST) : getenv("DB_HOST");
-        if (!$host || in_array(strtolower($host), ["database", "localhost", "127.0.0.1", "[::1]"], true)) {
-            fwrite(STDERR, "Render requires the PostgreSQL internal hostname in DB_HOST or the internal database URL in DB_URL. Check the web service environment settings.\n");
+        function fail($message) {
+            fwrite(STDERR, "Render PostgreSQL: ".$message.PHP_EOL);
             exit(1);
+        }
+        $url = getenv("DB_URL");
+        $source = $url ? "DB_URL" : "DB_HOST";
+        $parts = $url ? parse_url($url) : [];
+        if ($url && (!is_array($parts) || !in_array($parts["scheme"] ?? "", ["postgres", "postgresql", "pgsql"], true))) {
+            fail("DB_URL must be a PostgreSQL URL. Copy Internal Database URL from Render Postgres Connect.");
+        }
+        $host = $url ? ($parts["host"] ?? "") : getenv("DB_HOST");
+        if (!$host || in_array(strtolower($host), ["database", "localhost", "127.0.0.1", "[::1]", "::1"], true)) {
+            fail($source." is missing a Render PostgreSQL hostname. Sync the Blueprint or set DB_URL to the Internal Database URL in the web service environment.");
+        }
+        if (preg_match("~[\s/@]~", $host)) {
+            fail($source." has an invalid hostname. Put the full internal connection URL in DB_URL.");
         }
     '
 fi

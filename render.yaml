@@ -25,26 +25,10 @@ services:
     sync: false
   - key: DB_CONNECTION
     value: pgsql
-  - key: DB_HOST
+  - key: DB_URL
     fromDatabase:
       name: eneba-postgres
-      property: host
-  - key: DB_PORT
-    fromDatabase:
-      name: eneba-postgres
-      property: port
-  - key: DB_DATABASE
-    fromDatabase:
-      name: eneba-postgres
-      property: database
-  - key: DB_USERNAME
-    fromDatabase:
-      name: eneba-postgres
-      property: user
-  - key: DB_PASSWORD
-    fromDatabase:
-      name: eneba-postgres
-      property: password
+      property: connectionString
   - key: SESSION_DRIVER
     value: database
   - key: SESSION_COOKIE

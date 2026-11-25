@@ -10,11 +10,11 @@ Render's free Postgres expires **30 days after creation**, has **1 GB storage**,
 
 The HTTP image runs compiled React assets, nginx and PHP 8.3 FPM/Laravel 13 as www-data. Supervisor manages nginx/FPM. REST and Sanctum requests share one HTTPS origin. Node is used during the build only. The final `render` Dockerfile stage reuses shared HTTP configuration under `docker/vercel/`; no Vercel account is required.
 
-PostgreSQL stores users, sessions, carts, orders, cache/locks and encrypted demo keys. `render.yaml` injects host, port, database, user and password through `fromDatabase`, with `DB_CONNECTION=pgsql` and `DB_SSLMODE=require`. Both services must share the workspace/region. The Blueprint blocks external database access by default (`ipAllowList: []`); private app connections remain available. Keep APP_KEY and KEY_FINGERPRINT_SECRET stable and securely backed up separately from database dumps. Previews need separate databases/secrets.
+PostgreSQL stores users, sessions, carts, orders, cache/locks and encrypted demo keys. `render.yaml` injects the internal connection string into `DB_URL` through `fromDatabase`, with `DB_CONNECTION=pgsql` and `DB_SSLMODE=require`. Both services must share the workspace/region. The Blueprint blocks external database access by default (`ipAllowList: []`); private app connections remain available. Keep APP_KEY and KEY_FINGERPRINT_SECRET stable and securely backed up separately from database dumps. Previews need separate databases/secrets.
 
 ## Publish and migrate
 
-If Render reports `could not translate host name "database"`, the app is using the Docker Compose hostname. On the Render web service’s **Environment** page, replace `DB_HOST` with the internal hostname from the Postgres service’s **Connect → Internal** details. Set `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` from the same connection details, or sync the existing Blueprint to apply its database references. If `DB_URL` is set, Laravel uses it to override those connection fields. Remove a stale `DB_URL` or replace it with Render’s Internal Database URL. Keep `DB_CONNECTION=pgsql` and `DB_SSLMODE=require`, then save and deploy. Verify `/api/v1/health` returns HTTP 200 before attempting migrations.
+If Render reports `could not translate host name "database"`, the app is using the Docker Compose hostname. On the Render web service’s **Environment** page, replace `DB_HOST` with the internal hostname from the Postgres service’s **Connect → Internal** details. Set `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` from the same connection details, or sync the updated Blueprint to apply its `DB_URL` reference. If `DB_URL` is set, Laravel uses it to override those connection fields. Remove a stale `DB_URL` or replace it with Render’s Internal Database URL. Keep `DB_CONNECTION=pgsql` and `DB_SSLMODE=require`, then save and deploy. Verify `/api/v1/health` returns HTTP 200 before attempting migrations.
 
 1. Connect Render and publish these files to the deployment branch of `https://github.com/Ankitbajgain/eneba`. Local working files cannot alter Render's Git build.
 2. Import `render.yaml` as a Blueprint. Confirm **both** the web service and Postgres database show the free plan. Use repository-root Docker context, `docker/php/Dockerfile`, its default command, and `PORT=8080`. Leave framework build/output overrides empty.
@@ -73,3 +73,14 @@ Retain a compatible previous app image/commit. An application-only rollback must
 ## Maintenance HTTP API
 
 The [public maintenance APIs](modules/05-maintenance.md) can run the first migration inside Render without external Postgres access, login, an operator token or a paid pre-deploy hook. Deploy the latest image and POST `/api/v1/maintenance/migrate`, then verify success before opening the marketplace. No maintenance environment variables are needed. These public URLs can also clear caches, optimize config/events/routes/views and invoke storage:link. They expose no arbitrary command or demo seeding. Connectivity health does not establish schema completeness. Customer checkout/history login remains required.
+
+
+## Database troubleshooting
+
+- **Startup configuration error**. Sync the updated Blueprint or copy **Internal Database URL** from Postgres **Connect ? Internal** into the web service's `DB_URL`. Save and deploy. An existing manually created service needs the dashboard setting.
+- **`connection_failed` or `database_starting`**. Check that Postgres is available and the service and database share a region and account. Confirm the free database has not expired. Preserve TLS with `DB_SSLMODE=require` and remove any conflicting `sslmode` query option in the URL.
+- **`authentication_failed` or `database_missing`**. Refresh the full internal URL from the intended database and redeploy. Check that the URL uses the database name shown in Connect.
+- **`connection_limit`**. Check PostgreSQL connections and application worker counts before scaling or adding pooling.
+- **Health succeeds but tables are missing**. Run pending migrations using the release procedure above. The health endpoint checks connectivity only.
+
+Read the machine-readable reason in the server logs. The public health response stays generic, and the readiness log never includes a connection URL, password or raw exception.
