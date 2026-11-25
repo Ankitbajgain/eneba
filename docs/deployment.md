@@ -14,6 +14,8 @@ PostgreSQL stores users, sessions, carts, orders, cache/locks and encrypted demo
 
 ## Publish and migrate
 
+If Render reports `could not translate host name "database"`, the app is using the Docker Compose hostname. On the Render web service’s **Environment** page, replace `DB_HOST` with the internal hostname from the Postgres service’s **Connect → Internal** details. Set `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` from the same connection details, or sync the existing Blueprint to apply its database references. If `DB_URL` is set, Laravel uses it to override those connection fields. Remove a stale `DB_URL` or replace it with Render’s Internal Database URL. Keep `DB_CONNECTION=pgsql` and `DB_SSLMODE=require`, then save and deploy. Verify `/api/v1/health` returns HTTP 200 before attempting migrations.
+
 1. Connect Render and publish these files to the deployment branch of `https://github.com/Ankitbajgain/eneba`. Local working files cannot alter Render's Git build.
 2. Import `render.yaml` as a Blueprint. Confirm **both** the web service and Postgres database show the free plan. Use repository-root Docker context, `docker/php/Dockerfile`, its default command, and `PORT=8080`. Leave framework build/output overrides empty.
 3. Supply the prompted HTTPS APP_URL, persistent APP_KEY, KEY_FINGERPRINT_SECRET and hostname-only SANCTUM_STATEFUL_DOMAINS. Use blank SESSION_DOMAIN, Secure cookies and database session/cache stores. TRUSTED_PROXIES=* assumes Render is the only public ingress. DB credentials are injected automatically; `.env.render.example` documents the shape without real secrets.
